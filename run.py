@@ -3,22 +3,20 @@ import os
 from dotenv import load_dotenv
 from multiprocessing import Pool
 from tqdm import tqdm
-
+load_dotenv()
 
 from utils.discovery import get_available_tickers
 from sync_orchestrator import run_sync_in_process, ENV_CH_HOST, ENV_CH_PASSWORD, ENV_LOG_LEVEL
 
-SOURCE_TO_SYNC='BINANCE-FUT'
-DATA_TABLE_NAME = 'hl5s_test'
-CONTROL_TABLE_NAME = 'hl5s_daily_downloaded'
-NUM_PROCESSES = 3
-#===============
-DRY_RUN_MODE = False
-#===============
-
-LOG_LEVEL = 'INFO'
-CLICKHOUSE_HOST = '172.16.0.9'
-CLICKHOUSE_PASSWORD = '123'
+# Read configuration from environment variables, with defaults
+SOURCE_TO_SYNC = os.getenv("SOURCE_TO_SYNC", 'BINANCE-FUT')
+DATA_TABLE_NAME = os.getenv("DATA_TABLE_NAME", 'hl5s_test')
+CONTROL_TABLE_NAME = os.getenv("CONTROL_TABLE_NAME", 'hl5s_daily_downloaded')
+NUM_PROCESSES = int(os.getenv("NUM_PROCESSES", '3'))
+DRY_RUN_MODE = os.getenv("DRY_RUN_MODE", 'False').lower() == 'true'
+LOG_LEVEL = os.getenv("LOG_LEVEL", 'INFO')
+CLICKHOUSE_HOST = os.getenv("CLICKHOUSE_HOST")
+CLICKHOUSE_PASSWORD = os.getenv("CLICKHOUSE_PASSWORD")
 
 os.environ[ENV_CH_HOST] = CLICKHOUSE_HOST
 os.environ[ENV_LOG_LEVEL] = LOG_LEVEL
