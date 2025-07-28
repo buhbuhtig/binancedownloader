@@ -39,8 +39,8 @@ The pipeline consists of the following main components:
 
 1.  **Clone the Repository:**
     ```bash
-    git clone <your_repository_url>
-    cd <repository_directory>
+    git clone https://github.com/buhbuhtig/binancedownloader.git
+    cd binancedownloader
     ```
 
 2.  **Create a `.env` File:**
