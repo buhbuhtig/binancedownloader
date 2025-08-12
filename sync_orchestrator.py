@@ -106,10 +106,10 @@ def _monthly_bulk_load(source: SourceType, ticker: str, data_table:str, control_
                 logging.info(f"{prefix} Time range for insertion: from {min_ts.strftime('%Y-%m-%d %H:%M:%S')} to {max_ts.strftime('%Y-%m-%d %H:%M:%S')}")
         
             if not dry_run:
-                logging.info(f"[{prefix}] Inserting {len(df_for_data_table)} bars into '{data_table}'...")
+                logging.info(f"{prefix} Inserting {len(df_for_data_table)} bars into '{data_table}'...")
                 client.insert_dataframe(f'INSERT INTO {data_table} ({", ".join(DATA_TABLE_COLUMNS)}) VALUES', df_for_data_table)
             else:
-                logging.info(f"[{prefix}] [DRY RUN] Skipping insertion of {len(df_for_data_table)} bars into '{data_table}'.")
+                logging.info(f"{prefix} [DRY RUN] Skipping insertion of {len(df_for_data_table)} bars into '{data_table}'.")
             
             # 2. Calculation and insertion of daily aggregates
             adjusted_timestamp = full_df['Timestamp'] - pd.Timedelta(seconds=1)
@@ -124,10 +124,10 @@ def _monthly_bulk_load(source: SourceType, ticker: str, data_table:str, control_
             df_for_control_table = daily_summary[CONTROL_TABLE_COLUMNS].astype(CONTROL_TABLE_DTYPES)
             
             if not dry_run:
-                logging.info(f"[{prefix}] Inserting {len(df_for_control_table)} records into '{control_table}'...")
+                logging.info(f"{prefix} Inserting {len(df_for_control_table)} records into '{control_table}'...")
                 client.insert_dataframe(f'INSERT INTO {control_table} ({", ".join(CONTROL_TABLE_COLUMNS)}) VALUES', df_for_control_table)
             else:
-                logging.info(f"[{prefix}] [DRY RUN] Skipping insertion of {len(df_for_control_table)} records into '{control_table}'.")
+                logging.info(f"{prefix} [DRY RUN] Skipping insertion of {len(df_for_control_table)} records into '{control_table}'.")
             
             logging.info(f"{prefix} Month {month_date.strftime('%Y-%m')} successfully loaded.")
 
@@ -136,7 +136,7 @@ def _monthly_bulk_load(source: SourceType, ticker: str, data_table:str, control_
             if not dry_run:
                 cleanup_period_data(client, source, ticker, month_date, 'monthly', data_table, control_table)
             else:
-                logging.warning(f"[{ticker}] [DRY RUN] Skipping data cleanup for {month_date.strftime('%Y-%m')}.")
+                logging.warning(f"{prefix} [DRY RUN] Skipping data cleanup for {month_date.strftime('%Y-%m')}.")
             raise e
 
 def _daily_incremental_sync(source: SourceType, ticker: str, data_table:str, control_table:str, client: Client, dry_run:bool = False):
@@ -146,7 +146,7 @@ def _daily_incremental_sync(source: SourceType, ticker: str, data_table:str, con
     available_files = get_ticker_files(source=source, ticker=ticker, frequency="daily")
     available_dates = set(available_files.keys())
     
-    query_downloaded = f"SELECT DISTINCT Date FROM {control_table} WHERE Source = %(source)s AND Ticker = %(ticker)s"
+    query_downloaded = f"SELECT DISTINCT Date FROM {control_table} FINAL WHERE Source = %(source)s AND Ticker = %(ticker)s"
     downloaded_dates = {pd.Timestamp(row[0]).date() for row in client.execute(query_downloaded, {'source': source, 'ticker': ticker})}
     
     dates_to_download = sorted(list(available_dates - downloaded_dates))

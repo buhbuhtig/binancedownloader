@@ -33,6 +33,7 @@ SOURCE_CONFIG: Dict[SourceType, Dict[str, Any]] = {
 # --- NEW HELPER FUNCTION ---
 def _process_chunk_iterator(
     chunk_iterator: TextFileReader,
+    timestamp_unit: str,
     progress_callback: Optional[Callable[[int], None]]
 ) -> List[pd.DataFrame]:
     """
@@ -46,7 +47,7 @@ def _process_chunk_iterator(
         if progress_callback:
             progress_callback(total_rows_processed)
 
-        chunk_df['Timestamp'] = pd.to_datetime(chunk_df['timestamp_ms'], unit='ms')
+        chunk_df['Timestamp'] = pd.to_datetime(chunk_df['timestamp_ms'], unit=timestamp_unit)
         chunk_df['V'] = chunk_df['price'] * chunk_df['qty']
         
         agg_chunk = chunk_df.resample('5s', on='Timestamp', label='right', closed='right').agg(
@@ -109,15 +110,18 @@ def download_and_process_ticks_to_df(
     DTYPES = {"price": "float64", "qty": "float64", "timestamp_ms": "int64"}
 
     processed_chunks: List[pd.DataFrame]
-
+    timestamp_unit = 'ms'  # Default to milliseconds
+    if source == "BINANCE-SPOT" and trade_date >= datetime.date(2025, 1, 1):
+        timestamp_unit = 'us'  # Switch to microseconds
+    logging.info(f"[{ticker}][{source}] Using microseconds for timestamp conversion. {trade_date}")
+    
     with zip_file.open(csv_filename) as csv_stream:
-        # --- CHANGED BLOCK: Iterator creation logic ---
         try:
             chunk_iterator = pd.read_csv(
                 csv_stream, header=None, names=full_col_names,
                 usecols=COLS_TO_USE, dtype=DTYPES, chunksize=chunksize
             )
-            processed_chunks = _process_chunk_iterator(chunk_iterator, progress_callback)
+            processed_chunks = _process_chunk_iterator(chunk_iterator, timestamp_unit, progress_callback)
 
         except ValueError as e:
             if "could not convert string to float" in str(e):
@@ -126,10 +130,9 @@ def download_and_process_ticks_to_df(
                     csv_stream, header=0, names=full_col_names,
                     usecols=COLS_TO_USE, dtype=DTYPES, chunksize=chunksize
                 )
-                processed_chunks = _process_chunk_iterator(chunk_iterator_with_header, progress_callback)
+                processed_chunks = _process_chunk_iterator(chunk_iterator_with_header, timestamp_unit, progress_callback)
             else:
                 raise e
-        # ----------------------------------------------------
 
     if not processed_chunks:
         logging.info(f"[{ticker}][{source}] Processing completed. The source file for {date_str} is empty.")
